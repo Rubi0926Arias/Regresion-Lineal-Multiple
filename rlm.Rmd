@@ -1,0 +1,158 @@
+---
+title: "TRABAJO FINAL"
+author: "Rubi Arias"
+date: "Sunday, August 02, 2015"
+output: html_document
+---
+###__MODELOS LINEALES__
+En el presente documento contestaremos las siguientes preguntas planteadas:
+
+###__2.1__ .- Leer los archivos poblacion1.xlsx y poblacion2.xlsx, y analizar sus dimensiones.
+Para poder leer estos archivos necesitamos tener el paquete _readxl_ , luego con el siguiente código leeremos los archicos dados, donde también observaremos el contenido de cada una de ellas:
+```{r,echo=TRUE,eval=TRUE}
+dir<- "C:/Users/Rubi Arias/Desktop/Programa R/Regresion-Lineal-Multiple"
+library(readxl)
+poblacion1 <- read_excel("poblacion1.xlsx",sheet = 1,col_names = TRUE,na = "")
+poblacion2<-read_excel("poblacion2.xlsx",sheet=1,col_name =TRUE, na= "")
+```
+Para analizar su dimension utilizamos la función `dim()`:
+```{r,echo=TRUE,eval=TRUE}
+dim1 <- dim(poblacion1)
+dim2 <- dim(poblacion2)
+```
+Analizando la información observamos que la poblacion1 dispone de `r nrow(poblacion1)` observaciones de `r ncol(poblacion1)` variables, mientas que la poblacion2 dispone de `r nrow(poblacion2)` observaciones de `r ncol(poblacion2)` variables.
+
+###__2.2__ .-Una los archivos leídos en un mismo objeto llamado poblacion.
+Para poder unir los archivos utilizamos la función `merge()` , ya que estas datas tienen una columna en común, la cual es la variable `r names(poblacion1)[1]`.
+```{r,echo=TRUE,eval=TRUE}
+poblacion<-merge(x = poblacion1 ,y = poblacion2, by = "identificador", suffixes = c("","")) 
+str(poblacion)
+```
+
+###__2.3__ .-Cree un código que identifique la clase de cada variable y genere diagramos de cajas para variables continuas y diagramas de barra para variables discretas.
+Para realizar ambas instrucciones a la vez utilizaremos el lazo _for_, de donde para identificar la clase de cada variable usaremos la función `class()`, mientras que para realizar los diagramas pedidos, debido a que depende si son variables continuas o discretas preguntaremos en cada iteración si la variable es numéric o no.
+```{r,echo=TRUE,eval=TRUE}
+for(i in 2:ncol(poblacion))
+{
+  print(names(poblacion)[i])
+  print(class(poblacion[,i]))
+  if(is.numeric(poblacion[,i])==TRUE){
+         boxplot(poblacion[,i])
+    }else {
+       barplot(table(poblacion[,i]))
+    }
+  }
+```
+
+###__2.4__ .-Cree un código que calcule automáticamente el mínimo, media,máximo,desviación estándar, primer cuartil de cada variable numérica y la frecuencua en el caso de variables categóricas.
+De la misma manera que en el caso anterior utilizaremos el lazo _for_, seguido de un lazo _if_ el cual separará las variables numéricas y categóricas,para poder calcular lo pedido.
+Para calcular el minimo utilizamos `min()`, media usamos `mean()`, máximo ocupamos `max()`, desviación estandar tenemos la función `sd()`, y para hallar el primer cuartil `quantile()` (función recomendad) esto para el caso de las variables numéricas. Mientras que en las variables categóricos para calcular la frecuencia utilizamos las funciones `table()` y `dim()`.
+```{r,echo=TRUE,eval=TRUE}
+for(i in 2:ncol(poblacion)){
+    if(is.numeric(poblacion[,i])==TRUE){
+      print(names(poblacion)[i])
+    print(min(poblacion[,i],na.rm=TRUE))
+    print(mean(poblacion[,i],na.rm=TRUE))
+          print(max(poblacion[,i],na.rm=TRUE))
+          print(sd(poblacion[,i],na.rm=TRUE))
+          print(quantile(poblacion[,i], probd=seq(0,1,0.25, na.rm=FALSE)))
+    }else{
+      print(names(poblacion)[i])
+      print(table(poblacion[,i])/dim(poblacion)[1])
+}
+}
+```
+
+###__2.5__ .-Calcule la correlación entre la variable  dependiente poblacion y cada una de las variables explicativas(numéricas). 
+Primero utilizamos los lazos _for_ e _if_ (en este caso para ver si la variable es explicativa),luego para calcular la correlación utilizamos la función `cor()`:
+```{r,echo=TRUE,eval=TRUE}
+for (i in 3:ncol(poblacion))
+{
+  if(is.numeric(poblacion[,i])==TRUE){
+    print(names(poblacion)[i])
+    print(cor(x = poblacion[,i], y= poblacion[,"poblacion"]))
+  }
+}
+```
+
+###__2.6__ .-Considere la variable categórica serv.bas.compl con una confiabilidad del 90%,¿Puede asumir que la media de la variable poblacion en el grupo 
+serv.bas.compl:SI es distinta a la media del grupo serv.bas.compl:NO?.
+Antes de realizar el análisis debemos graficar el diagrama de cajas para observar
+en donde se encuentra las medias, pero antes de esto modificaremos nuestra data:
+```{r,echo=TRUE,eval=TRUE}
+servicios<-factor(poblacion[,"serv.bas.compl"],levels=c("SI","NO"),labels=c("si","no"))
+region<-factor(poblacion[,"region"],levels=c("A","B"),labels=c("a","b"))
+POBLACION<-data.frame(poblacion[,1:7],region,servicios)
+plot(poblacion ~ servicios , data = POBLACION) 
+```
+
+
+Luego realizamos la prueba de hipótesis, para ver si se puede asumir la media de la variable  poblacion en el grupo serv.bas.compl:SI es distinta a la media del grupo serv.bas.compl:NO con una confiabilidad del 90%:
+```{r,echo=TRUE,eval=TRUE}
+t.test(poblacion ~ servicios , data = POBLACION, conf.level=0.9) 
+```
+
+###__2.7__ .-Considerando los cálculos anteriores genere el modelo de regresión lineal múltiple que mejor se ajuste a los datos. Interprete los coeficientes obtenidos.
+Para general el modelo de regresión lineal múltiple que mejor se ajusta a los datos tomamos, cojemos las variables que hayan tenido en valor absoluto la correlacion mayor, entre ellas se encuentra `r names(poblacion)[3]`,`r names(poblacion)[4]` y `r names(poblacion)[7]`:
+```{r,echo=TRUE,eval=TRUE}
+regremul<-lm(poblacion~var.pobl.mayor+menores.18+tasa.crimen,data=POBLACION)
+summary(regremul) 
+```
+Por lo que se obtiene la siguiente regresión múltiple:
+$$\hat{`r substring(names(poblacion)[2],1)`} = `r regremul$coefficients[1]` + `r regremul$coefficients[2]`\hat{`r substring(names(poblacion)[3],1)`} + `r regremul$coefficients[3]`\hat{`r substring(names(poblacion)[4],1)`} `r regremul$coefficients[4]`\hat{`r substring(names(poblacion)[7],1)`}$$
+_Interpretación de los coeficientes de regresión_:
+
+* Si la variable `r substring(names(poblacion)[3],1)` se incrementa en 1 unidad, y los demas regresores se mantienen constantes, entonces `r substring(names(poblacion)[2],1)` aumenta en promedio `r regremul$coefficients[2]` unidades.
+* Si la varibale `r substring(names(poblacion)[4],1)` se incrementa en 1 unidad, y los demas regresores se mantienen constantes, entonces `r substring(names(poblacion)[2],1)` aumenta en promedio `r regremul$coefficients[3]` unidades.
+*  Si la variable `r substring(names(poblacion)[7],1)` se incrementa en 1 unidad, y los demas regresores se mantienen constantes, entonces  `r substring(names(poblacion)[2],1)` disminuye en promedio  `r abs(regremul$coefficients[4])` unidades.
+
+###__2.8__ .- Interprete el R^2.
+Para obtener solo el valor de R^2, utilizamos lo siguiente:
+```{r,echo=TRUE,eval=TRUE}
+summary(regremul)["r.squared"]
+```
+De donde se interpreta de la siguiente manera: 100(`r summary(regremul)[["r.squared"]]`$)% es el porcentaje de la variablididad total explicada por la regresión.
+
+###__2.9__ .-Analice la significancia de la regresión y de cada uno de los parámetros individuales.
+Para obtener la significancia de la regresion necesitamos la tabla ANOVA, la cual se obtiene mediante la función `aov()`.
+```{r,echo=TRUE,eval=TRUE}
+Anova<-aov(regremul)
+summary(Anova)
+```
+Por otro lado tenemos la significancia de cada uno de los parámetros individuales:
+
+*Como $F=`r summary(Anova)[[1]][1,4]`$ es `r tex<-"menor"; if(summary(Anova)[[1]][1,4]>qf(0.95,1,(nrow(poblacion)-4))) tex<-"mayor"; tex` que $F_{1,`r (nrow(poblacion)-4)`}(\frac{\alpha}{2})= `r qf(0.95,1,(nrow(poblacion)-4))`$
+`r tex<-"no rechazo"; if(summary(Anova)[[1]][1,4]>qf(0.95,1,(nrow(poblacion)-4))) tex<-"rechazo"; tex`
+$H_0: \beta_2=0$.
+
+*Como $F=`r summary(Anova)[[1]][2,4]`$ es `r tex<-"menor"; if(summary(Anova)[[1]][2,4]>qf(0.95,1,(nrow(poblacion)-4))) tex<-"mayor"; tex` que $F_{1,`r (nrow(poblacion)-4)`}(\frac{\alpha}{2})= `r qf(0.95,1,(nrow(poblacion)-4))`$
+`r tex<-"no rechazo"; if(summary(Anova)[[1]][2,4]>qf(0.95,1,(nrow(poblacion)-4))) tex<-"rechazo"; tex`
+$H_0: \beta_3=0$.
+
+*Como $F=`r summary(Anova)[[1]][3,4]`$ es `r tex<-"menor"; if(summary(Anova)[[1]][3,4]>qf(0.95,1,(nrow(poblacion)-4))) tex<-"mayor"; tex` que $F_{1,`r (nrow(poblacion)-4)`}(\frac{\alpha}{2})= `r qf(0.95,1,(nrow(poblacion)-4))`$
+`r tex<-"no rechazo"; if(summary(Anova)[[1]][3,4]>qf(0.95,1,(nrow(poblacion)-4))) tex<-"rechazo"; tex`
+$H_0: \beta_4=0$.
+
+###__2.10__ .-Realice un análisis detallado de los residuos
+Para ello primero tomamos los residuos:
+```{r,echo=TRUE,eval=TRUE}
+u_t<-numeric(nrow(poblacion)) 
+for(i in 1:nrow(poblacion)){
+  u_t[i]<-summary(regremul)[["residuals"]][i]
+}
+u_t
+```
+Luego observamos el comportamiento que tiene las variables poblacion con los residuos:
+```{r,echo=TRUE,eval=TRUE}
+plot(poblacion[,"poblacion"],u_t)
+```
+Luego realizamos el respectivo histograma de residuos:
+```{r,echo=TRUE,eval=TRUE}
+hist(u_t)
+```
+
+Y por últimoo realizamos el gráfico de la distribución normal con su respectiva linea de tendencia:
+```{r,echo=TRUE,eval=TRUE}
+qqnorm(u_t)
+qqline(u_t)
+```
